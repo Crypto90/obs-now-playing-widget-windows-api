@@ -21,4 +21,5 @@ The widget automatically hides (fades out) itself in case its not in "playing" s
 
 ## How to run
 To run the script, install python and run the cmd command in the same folder as the script:
+
 python python obs_now_playing_widget_windows_media_api.py
