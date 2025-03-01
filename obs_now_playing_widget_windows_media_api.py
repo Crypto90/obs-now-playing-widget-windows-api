@@ -10,8 +10,46 @@ import os
 import sys
 import webbrowser
 import socket
+import shutil
 
-app = Flask(__name__)
+def get_exe_dir():
+    """
+    Get the directory where the executable is located (not the temp folder).
+    """
+    if getattr(sys, '_MEIPASS', False):
+        return os.path.dirname(sys.executable)  # Path of the .exe
+    return os.path.dirname(os.path.abspath(__file__))
+
+def copy_templates():
+    """
+    Copy the external 'templates' folder to the temp directory if needed.
+    """
+    exe_dir = get_exe_dir()
+    temp_dir = getattr(sys, '_MEIPASS', exe_dir)  # Handle both .exe and script
+
+    src_templates = os.path.join(exe_dir, 'templates')
+    dest_templates = os.path.join(temp_dir, 'templates')
+
+    # Copy only if the folder exists and is not already copied
+    if os.path.exists(src_templates) and not os.path.exists(dest_templates):
+        shutil.copytree(src_templates, dest_templates)
+        print(f"Copied templates to: {dest_templates}")
+    return dest_templates
+
+
+
+# Ensure templates are copied
+template_folder = copy_templates()
+
+# Detect the base directory (location of the .exe)
+base_dir = os.path.dirname(os.path.abspath(__file__))
+print(f"Running from: {base_dir}")
+print(f"Looking for templates in: {os.path.join(base_dir, 'templates')}")
+
+
+
+# Flask app with external templates folder
+app = Flask(__name__, template_folder=os.path.join(base_dir, 'templates'))
 
 media_info = {
     'title': 'Unknown',
@@ -37,6 +75,8 @@ last_known_position = 0
 
 # Store current layout
 template_name = 'horizontal'
+
+
 
 
 
