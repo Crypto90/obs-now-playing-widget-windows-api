@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Now Playing</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            background-color: #121212;
+            color: white;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .widget {
+            display: flex;
+            flex-direction: column; /* Force vertical layout */
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .cover-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cover-art {
+            width: 100%;
+            height: auto;
+            object-fit: contain;
+        }
+
+        .play-pause-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: clamp(3rem, 10vw, 8rem);
+            opacity: 0.8;
+        }
+
+        .info-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 2vw;
+        }
+
+        h2 {
+            margin: 0;
+            font-size: clamp(1.5rem, 4vw, 4rem);
+        }
+		
+		h3 {
+            margin: 0;
+            font-size: clamp(1rem, 2vw, 4rem);
+        }
+
+        .progress-container {
+            display: flex;
+            align-items: center;
+            gap: 1vw;
+            margin-top: 2vh;
+        }
+
+        .progress {
+            flex: 1;
+            height: 3vh;
+        }
+
+        .source {
+            margin-top: 2vh;
+            font-size: clamp(1rem, 2vw, 2rem);
+        }
+
+        #app_id {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="widget" class="widget">
+        <div class="cover-container">
+            <img id="cover" class="cover-art" src="" alt="Cover Art">
+            <span id="play-pause" class="play-pause-icon"></span>
+        </div>
+
+        <div class="info-container">
+            <h2 id="title">Unknown Title</h2>
+            <h3 id="artist">Unknown Artist</h3>
+
+            <div class="progress-container">
+                <span id="current-time" class="time">0:00</span>
+                <div class="progress bg-secondary">
+                    <div id="progress-bar" class="progress-bar" role="progressbar" style="width: 0%;"></div>
+                </div>
+                <span id="duration" class="time">0:00</span>
+            </div>
+
+            <p id="app_id" class="source">Source: Unknown</p>
+        </div>
+    </div>
+
+    <script>
+        function formatTime(seconds) {
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${minutes}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        async function fetchMediaInfo() {
+            try {
+                const response = await fetch('/media');
+                const media = await response.json();
+
+                document.getElementById('title').textContent = media.title || 'Unknown Title';
+                document.getElementById('artist').textContent = media.artist || 'Unknown Artist';
+                document.getElementById('app_id').textContent = `Source: ${media.app_id || 'Unknown'}`;
+
+                // Update cover art
+                const coverElement = document.getElementById('cover');
+                if (media.cover) {
+                    coverElement.src = media.cover;
+                }
+
+                // Update progress bar and time
+                const currentTime = media.position || 0;
+                const duration = media.duration || 0;
+
+                document.getElementById('current-time').textContent = formatTime(currentTime);
+                document.getElementById('duration').textContent = formatTime(duration);
+
+                if (duration > 0) {
+                    const progressPercent = (currentTime / duration) * 100;
+                    document.getElementById('progress-bar').style.width = `${progressPercent}%`;
+                } else {
+                    document.getElementById('progress-bar').style.width = '0%';
+                }
+
+                // Handle visibility and fade animation
+                const widget = document.getElementById('widget');
+                widget.style.opacity = 0;
+                widget.style.transition = 'opacity 0.5s ease';
+
+                if (media.status === 'Playing') {
+                    widget.style.display = 'flex';
+                    setTimeout(() => widget.style.opacity = 1, 10);
+                } else {
+                    widget.style.opacity = 0;
+                    setTimeout(() => widget.style.display = 'none', 500);
+                }
+
+            } catch (error) {
+                console.error('Error fetching media info:', error);
+            }
+        }
+
+        // Poll for media info
+        setInterval(fetchMediaInfo, 1000);
+        fetchMediaInfo();
+    </script>
+</body>
+</html>
