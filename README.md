@@ -5,6 +5,11 @@ Horizontal preview:
 ![til](./preview_horizontal.gif)
 
 
+UI window preview:
+
+![til](./ui_preview.png)
+
+
 This python script runs a flask webserver and parses via the windows media api current playing media informations and visulize it in a dynamic player template which can be added as a browser source to your obs overlay.
 
 Comes with a dynamic horizontal and vertical template.
