@@ -19,7 +19,7 @@
 
 ![til](./ui_preview.png)
 
-### Custom CSS preview:
+### Custom CSS preview (OBS Studio):
 ![475B1398-69C7-4C5D-B2CF-DC4B995BDEFB](https://github.com/user-attachments/assets/198bbc66-9ba5-426b-9b70-5b1b0697aff6)
 ```
 body { background-color: rgba(0, 0, 0, 0); margin: 0px auto; overflow: hidden; }
