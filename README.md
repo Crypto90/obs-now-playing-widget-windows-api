@@ -6,8 +6,6 @@
 
 [Download v1.0.1](https://github.com/Crypto90/obs-now-playing-widget-windows-api/releases/download/1.0.1/obs_now_playing_widget_windows_media_api_v1.0.1.zip)
 
-<img width="398" height="306" alt="image" src="https://github.com/user-attachments/assets/9647b0bc-7760-4617-927c-bd5e6cb244c2" />
-
 
 ### Horizontal preview:
 
@@ -20,7 +18,7 @@
 
 ### UI window preview:
 
-![til](./ui_preview.png)
+<img width="398" height="306" alt="image" src="https://github.com/user-attachments/assets/9647b0bc-7760-4617-927c-bd5e6cb244c2" />
 
 ### Custom CSS preview (OBS Studio):
 ![475B1398-69C7-4C5D-B2CF-DC4B995BDEFB](https://github.com/user-attachments/assets/198bbc66-9ba5-426b-9b70-5b1b0697aff6)
