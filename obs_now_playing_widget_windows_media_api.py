@@ -13,6 +13,18 @@ import socket
 import shutil
 import json
 
+import math
+
+from PIL import Image, ImageTk
+from PIL import ImageDraw
+import io
+
+
+cached_cover = ''
+cached_song_id = ''
+
+
+
 def get_exe_dir():
     """
     Get the directory where the executable is located (not the temp folder).
@@ -60,6 +72,21 @@ def clear_locked_app():
 
 
 
+
+
+def is_significant_change(new_info, old_info):
+    if not old_info:
+        return True
+
+    keys_to_check = ['title', 'artist', 'app_id', 'status']
+    for key in keys_to_check:
+        if new_info.get(key) != old_info.get(key):
+            return True
+    
+    if math.fabs(new_info.get('position', 0) - old_info.get('position', 0)) > 0.5:
+        return True
+    
+    return False
 
 
 
@@ -139,7 +166,7 @@ def set_layout(layout):
     template_name = layout
 
 async def get_media_info():
-    global last_update_time, last_position, last_song_id, last_known_position
+    global last_update_time, last_position, last_song_id, last_known_position, cached_cover, cached_song_id
 
     try:
         session_manager = await MediaManager.request_async()
@@ -178,13 +205,20 @@ async def get_media_info():
         last_known_position = current_timeline_position
 
         duration = timeline.end_time.total_seconds()
-        cover_data = await extract_cover(info.thumbnail) if info.thumbnail else ""
+        
+        
+        
+        # Only reload cover art if song changed
+        if current_song_id != cached_song_id:
+            cached_cover = await extract_cover(info.thumbnail) if info.thumbnail else ""
+            cached_song_id = current_song_id
+        
         return {
             'title': info.title,
             'artist': info.artist,
             'position': position,
             'duration': duration,
-            'cover': cover_data,
+            'cover': cached_cover,
             'app_id': app_id,
             'status': STATUS_MAP.get(playback_status, "Unknown")
         }
@@ -207,22 +241,37 @@ async def extract_cover(thumbnail):
         return ""
 
 async def update_media_info():
+    global media_info
     while True:
         try:
             new_info = await get_media_info()
-            # if we have locked to the app id, only show now playing info of specific app if available.
+
             if locked_app_id:
                 session_app_id = new_info.get('app_id') if new_info else None
-                if "!" in session_app_id:
+                if session_app_id and "!" in session_app_id:
                     session_app_id = session_app_id.split("!")[1]
                 if session_app_id != locked_app_id:
-                    continue  # Skip updating if app ID doesn't match lock
-            
+                    await asyncio.sleep(1)
+                    continue
+
             if new_info:
-                media_info.update(new_info)
+                if is_significant_change(new_info, media_info):
+                    media_info.update(new_info)
+            else:
+                # Reset to default when no session is active
+                media_info = {
+                    'title': 'Unknown',
+                    'artist': 'Unknown',
+                    'position': 0,
+                    'duration': 0,
+                    'cover': '',
+                    'app_id': 'Unknown',
+                    'status': 'Stopped'
+                }
         except Exception as e:
             print(f"Error updating media info: {e}")
         await asyncio.sleep(1)
+
 
 @app.route('/')
 def index():
@@ -245,8 +294,9 @@ def start_async_loop():
 def create_gui():
     global locked_app_id
     root = tk.Tk()
-    root.title("Now Playing Widget v1.0.1 © Crypto90")
-    root.geometry("400x280")
+    root.title("Now Playing Widget v1.0.2 © Crypto90")
+    root.geometry("400x285")
+    root.resizable(False, False)
     root.configure(bg="#1e1e1e")  # Dark background
 
     # Unified styling for dark mode
@@ -338,7 +388,7 @@ def create_gui():
         copy_button = tk.Button(
             frame,
             text="copy",
-            bg="darkblue",
+            bg="darkgreen",
             fg="white",
             activebackground="#000066",
             activeforeground="white",
@@ -348,27 +398,64 @@ def create_gui():
         copy_button.pack(side="left", padx=0)
     
     
-    
-    
-    
-    
-    
-    
-    
     tk.Label(root, text="Now playing:", font=("TkDefaultFont", 10, "bold"), fg="white", bg="#1e1e1e").pack(anchor='w', padx=10, pady=(10, 0))
     
     # current title
-    current_title_label = tk.Label(root, text="[00:00] Unknown - Unknown", fg="white", bg="#000000")
-    style_widget(current_title_label)
-    current_title_label.pack(anchor='w', padx=10, pady=(0, 0))
+    #current_title_label = tk.Label(root, text="[00:00] Unknown - Unknown", fg="white", bg="#000000")
+    #style_widget(current_title_label)
+    #current_title_label.pack(anchor='w', padx=10, pady=(0, 0))
+    
+    # === New Visual Now Playing Widget ===
+    now_playing_frame = tk.Frame(root, bg="#1e1e1e")
+    now_playing_frame.pack(fill="x", padx=10, pady=(0, 0))
+
+    cover_label = tk.Label(now_playing_frame, bg="#1e1e1e")
+    cover_label.grid(row=0, column=0, rowspan=3, padx=(0, 10))
+
+    song_title_label = tk.Label(now_playing_frame, text="Title", font=("Segoe UI", 10, "bold"), bg="#1e1e1e", fg="white", anchor="w")
+    song_title_label.grid(row=0, column=1, sticky="w")
+
+    artist_label = tk.Label(now_playing_frame, text="Artist", font=("Segoe UI", 9), bg="#1e1e1e", fg="#cccccc", anchor="w")
+    artist_label.grid(row=1, column=1, sticky="w")
+
+    progress_frame = tk.Frame(now_playing_frame, bg="#1e1e1e")
+    progress_frame.grid(row=2, column=1, sticky="we")
+
+    # Progress bar
+    progress_canvas = tk.Canvas(progress_frame, height=6, width=300, bg="#333333", highlightthickness=0)
+    progress_canvas.pack(fill="x")
+
+    # Time labels frame
+    time_label_frame = tk.Frame(progress_frame, bg="#1e1e1e")
+    time_label_frame.pack(fill="x", pady=(2, 0))  # Slight padding above
+
+    start_time_label = tk.Label(time_label_frame, text="00:00", font=("Segoe UI", 8), bg="#1e1e1e", fg="white")
+    start_time_label.pack(side="left")
+
+    end_time_label = tk.Label(time_label_frame, text="00:00", font=("Segoe UI", 8), bg="#1e1e1e", fg="white")
+    end_time_label.pack(side="right")
+
     
     
-    tk.Label(root, text="Process:", font=("TkDefaultFont", 10, "bold"), fg="white", bg="#1e1e1e").pack(anchor='w', padx=10, pady=(10, 0))
+    
+    
+    
+    tk.Label(root, text="Media process:", font=("TkDefaultFont", 10, "bold"), fg="white", bg="#1e1e1e").pack(anchor='w', padx=10, pady=(10, 0))
     # Current Playing Process
     
     current_process_label = tk.Label(root, text="None", fg="white", bg="#1e1e1e")
     style_widget(current_process_label)
     current_process_label.pack(anchor='w', padx=10, pady=(0, 0))
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     # Lock Button
     def toggle_lock():
@@ -397,14 +484,41 @@ def create_gui():
         cursor="hand2"
     )
 
-    lock_button.pack(anchor='w', padx=10, pady=(5, 10))
+    # Frame for Lock and Donate buttons on same row
+    button_row = tk.Frame(root, bg="#1e1e1e")
+    button_row.pack(fill="x", padx=10, pady=(5, 10))
+
+    # Lock Button (left aligned)
+    lock_button = tk.Button(
+        button_row,
+        text="Lock Current App",
+        command=toggle_lock,
+        bg="darkred",
+        fg="white",
+        activebackground="#660000",
+        activeforeground="white",
+        cursor="hand2"
+    )
+    lock_button.pack(side="left")
+
+    # Donate Button (right aligned with 10px padding from right)
+    donate_button = tk.Button(
+        button_row,
+        text="Buy me a Coffee ☕",
+        command=lambda: webbrowser.open("https://ko-fi.com/crypto90"),
+        bg="#f39c12",
+        fg="black",
+        activebackground="#d68910",
+        activeforeground="black",
+        cursor="hand2"
+    )
+    donate_button.pack(side="right", padx=(0, 0))  # Already right-aligned
+
     
     # Set initial button state
     if locked_app_id:
         lock_button.config(text="Unlock App", bg="darkgreen", fg="white", activebackground="#004d00", activeforeground="white")
 
-    # Donate & Footer
-    tk.Button(root, text="Buy me a Coffee ☕", command=lambda: webbrowser.open("https://ko-fi.com/crypto90"), bg="#f39c12", fg="black", activebackground="#d68910", activeforeground="black", cursor="hand2").pack(anchor='w', padx=10, pady=(10, 10))
     
     
     
@@ -429,15 +543,85 @@ def create_gui():
     
     # Update UI loop
     def update_process_label():
+        global cached_cover
+
         app_id = media_info.get("app_id", "Unknown")
         status = media_info.get("status", "Stopped")
         
-        title = media_info.get("title", "Unknown")
-        artist = media_info.get("artist", "Unknown")
-        position = media_info.get("position", 0)
-        duration = media_info.get("duration", 0)
-        current_title_label.config(text=f"[{format_seconds(int(position))}] {title} - {artist} ({format_seconds(int(duration))})", fg="white", bg="#000000")
+        title = media_info.get("title") or "Unknown"
+        artist = media_info.get("artist") or "Unknown"
+
+        # For position and duration, which are numbers, make sure to handle empty string or None
+        try:
+            position = int(media_info.get("position", 0))
+        except (TypeError, ValueError):
+            position = 0
+
+        try:
+            duration = int(media_info.get("duration", 0))
+        except (TypeError, ValueError):
+            duration = 0
         
+        
+        # Update labels
+        song_title_label.config(text=title)
+        artist_label.config(text=artist)
+        start_time_label.config(text=format_seconds(int(position)))
+        end_time_label.config(text=format_seconds(int(duration)))
+
+        # Update progress bar
+        if duration > 0 and position <= duration:
+            percent = position / duration
+            progress_canvas.delete("all")
+            width = progress_canvas.winfo_width()
+            progress_canvas.create_rectangle(0, 0, width * percent, 10, fill="#00cc66", width=0)
+        else:
+            # Clear progress bar when no media or duration
+            progress_canvas.delete("all")
+
+        # Update album art
+        try:
+            if cached_cover.startswith("data:image"):
+                img_data = base64.b64decode(cached_cover.split(",")[1])
+                img = Image.open(io.BytesIO(img_data)).resize((60, 60)).convert("RGBA")
+
+                if status == "Paused":
+                    
+
+                    overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
+                    draw = ImageDraw.Draw(overlay)
+
+                    # Dimensions for pause bars
+                    bar_width = 6
+                    spacing = 6
+                    height = 30
+                    x_center = img.width // 2
+
+                    # Left bar
+                    draw.rectangle(
+                        [x_center - spacing - bar_width, (img.height - height) // 2,
+                         x_center - spacing, (img.height + height) // 2],
+                        fill=(255, 255, 255, 180)
+                    )
+                    # Right bar
+                    draw.rectangle(
+                        [x_center + spacing, (img.height - height) // 2,
+                         x_center + spacing + bar_width, (img.height + height) // 2],
+                        fill=(255, 255, 255, 180)
+                    )
+
+                    img = Image.alpha_composite(img, overlay)
+
+            else:
+                img = Image.new("RGB", (64, 64), "black")  # fallback black square
+            
+            cover_img = ImageTk.PhotoImage(img)
+            cover_label.config(image=cover_img)
+            cover_label.image = cover_img  # Keep reference!
+        except Exception as e:
+            print(f"Error updating cover: {e}")
+
+        # App ID status
         if "!" in app_id:
             app_id = app_id.split("!")[1]
         if locked_app_id and app_id != locked_app_id:
@@ -446,6 +630,7 @@ def create_gui():
             current_process_label.config(text=f"{app_id} ({status})")
 
         root.after(1000, update_process_label)
+
 
     update_process_label()
     
