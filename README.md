@@ -4,7 +4,7 @@
 
 ### Download prebuild binary (.exe) version which is ready to run:
 
-[Download v1.0.1](https://github.com/Crypto90/obs-now-playing-widget-windows-api/releases/download/1.0.1/obs_now_playing_widget_windows_media_api_v1.0.1.zip)
+[Download v1.0.2](https://github.com/Crypto90/obs-now-playing-widget-windows-api/releases/download/1.0.2/obs_now_playing_widget_windows_media_api_v1.0.2.zip)
 
 
 ### Horizontal preview:
@@ -18,7 +18,8 @@
 
 ### UI window preview:
 
-<img width="398" height="306" alt="image" src="https://github.com/user-attachments/assets/9647b0bc-7760-4617-927c-bd5e6cb244c2" />
+<img width="402" height="317" alt="image" src="https://github.com/user-attachments/assets/8c59c3ae-4cba-4834-862b-fc37bf68dd04" />
+
 
 ### Custom CSS preview (OBS Studio):
 ![475B1398-69C7-4C5D-B2CF-DC4B995BDEFB](https://github.com/user-attachments/assets/198bbc66-9ba5-426b-9b70-5b1b0697aff6)
