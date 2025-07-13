@@ -581,7 +581,7 @@ def create_gui():
 
         # Update album art
         try:
-            if cached_cover.startswith("data:image"):
+            if cached_cover.startswith("data:image") and duration > 0:
                 img_data = base64.b64decode(cached_cover.split(",")[1])
                 img = Image.open(io.BytesIO(img_data)).resize((60, 60)).convert("RGBA")
 
@@ -611,7 +611,6 @@ def create_gui():
                     )
 
                     img = Image.alpha_composite(img, overlay)
-
             else:
                 img = Image.new("RGB", (64, 64), "black")  # fallback black square
             
