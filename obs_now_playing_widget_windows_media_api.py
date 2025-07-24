@@ -220,7 +220,7 @@ async def get_media_info():
         
         # only extract cover if the app id matches in case we have locked the app id
         if locked_app_id:
-            session_app_id = app_id if new_info else None
+            session_app_id = app_id
             if session_app_id and "!" in session_app_id:
                 session_app_id = session_app_id.split("!")[1]
             if session_app_id == locked_app_id:
