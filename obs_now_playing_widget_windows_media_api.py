@@ -26,6 +26,7 @@ cached_song_id = ''
 
 
 def get_exe_dir():
+    #print("DEBUG: get_exe_dir")
     """
     Get the directory where the executable is located (not the temp folder).
     """
@@ -37,6 +38,7 @@ def get_exe_dir():
 SETTINGS_FILE = os.path.join(get_exe_dir(), "now_playing_settings.json")
 
 def save_settings(locked_app=None, layout=None):
+    #print("DEBUG: save_settings")
     settings = load_settings()
 
     if locked_app is not None:
@@ -59,6 +61,7 @@ def save_settings(locked_app=None, layout=None):
 
 
 def load_settings():
+    #print("DEBUG: load_settings")
     if os.path.exists(SETTINGS_FILE):
         try:
             with open(SETTINGS_FILE, "r") as f:
@@ -75,6 +78,7 @@ def clear_locked_app():
 
 
 def is_significant_change(new_info, old_info):
+    #print("DEBUG: is_significant_change")
     if not old_info:
         return True
 
@@ -92,6 +96,7 @@ def is_significant_change(new_info, old_info):
 
 
 def copy_templates():
+    #print("DEBUG: copy_templates")
     """
     Copy the external 'templates' folder to the temp directory if needed.
     """
@@ -152,6 +157,7 @@ locked_app_id = None  # Global lock state
 
 
 def get_local_ip():
+    #print("DEBUG: get_local_ip")
     try:
         hostname = socket.gethostname()
         local_ip = socket.gethostbyname(hostname)
@@ -163,11 +169,12 @@ def get_local_ip():
 
 def set_layout(layout):
     global template_name
+    #print("DEBUG: set_layout")
     template_name = layout
 
 async def get_media_info():
-    global last_update_time, last_position, last_song_id, last_known_position, cached_cover, cached_song_id
-
+    global last_update_time, last_position, last_song_id, last_known_position, cached_cover, cached_song_id, locked_app_id
+    #print("DEBUG: get_media_info")
     try:
         session_manager = await MediaManager.request_async()
         current_session = session_manager.get_current_session()
@@ -208,10 +215,25 @@ async def get_media_info():
         
         
         
-        # Only reload cover art if song changed
-        if current_song_id != cached_song_id:
-            cached_cover = await extract_cover(info.thumbnail) if info.thumbnail else ""
-            cached_song_id = current_song_id
+        
+        
+        
+        # only extract cover if the app id matches in case we have locked the app id
+        if locked_app_id:
+            session_app_id = app_id if new_info else None
+            if session_app_id and "!" in session_app_id:
+                session_app_id = session_app_id.split("!")[1]
+            if session_app_id == locked_app_id:
+                # Only reload cover art if song changed
+                if current_song_id != cached_song_id:
+                    cached_cover = await extract_cover(info.thumbnail) if info.thumbnail else ""
+                    cached_song_id = current_song_id
+        else:
+            # no app id locked, so we can normally update the cover in case if the song changed.
+            # Only reload cover art if song changed
+            if current_song_id != cached_song_id:
+                cached_cover = await extract_cover(info.thumbnail) if info.thumbnail else ""
+                cached_song_id = current_song_id
         
         return {
             'title': info.title,
@@ -227,6 +249,7 @@ async def get_media_info():
         return None
 
 async def extract_cover(thumbnail):
+    #print("DEBUG: extract_cover")
     try:
         stream = await thumbnail.open_read_async()
         reader = DataReader(stream)
@@ -241,8 +264,10 @@ async def extract_cover(thumbnail):
         return ""
 
 async def update_media_info():
-    global media_info
+    global media_info, locked_app_id
+    #print("DEBUG: update_media_info")
     while True:
+        #print("DEBUG: update_media_info while")
         try:
             new_info = await get_media_info()
 
@@ -275,32 +300,38 @@ async def update_media_info():
 
 @app.route('/')
 def index():
+    #print("DEBUG: /")
     return render_template(f'{template_name}.html', media=media_info)
 
 @app.route('/media')
 def media():
+    #print("DEBUG: media")
     return jsonify(media_info)
 
 @app.route('/reload')
 def reload():
+    #print("DEBUG: reload")
     """Force a page reload to reflect layout changes."""
     return redirect(url_for('index'))
 
 def start_async_loop():
+    #print("DEBUG: start_async_loop")
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     loop.run_until_complete(update_media_info())
 
 def create_gui():
     global locked_app_id
+    #print("DEBUG: create_gui")
     root = tk.Tk()
-    root.title("Now Playing Widget v1.0.2 © Crypto90")
+    root.title("Now Playing Widget v1.0.3 © Crypto90")
     root.geometry("400x285")
     root.resizable(False, False)
     root.configure(bg="#1e1e1e")  # Dark background
 
     # Unified styling for dark mode
     def style_widget(widget):
+        #print("DEBUG: style_widget")
         widget.configure(bg="#1e1e1e", fg="white", highlightbackground="#333", highlightcolor="white")
 
     def shutdown():
@@ -327,6 +358,7 @@ def create_gui():
 
     def update_layout():
         global locked_app_id, template_name
+        #print("DEBUG: update_layout")
         new_layout = layout_var.get()
         set_layout(new_layout)
         save_settings(locked_app=locked_app_id, layout=new_layout)  # Preserve lock
@@ -460,6 +492,7 @@ def create_gui():
     # Lock Button
     def toggle_lock():
         global locked_app_id, template_name  # Make sure template_name is accessible
+        #print("DEBUG: toggle_lock")
         if locked_app_id:
             locked_app_id = None
             save_settings(locked_app=None, layout=template_name)  # Preserve layout
@@ -526,6 +559,7 @@ def create_gui():
     
     
     def format_seconds(seconds: int) -> str:
+        #print("DEBUG: format_seconds")
         """
         Convert seconds to a human-readable HH:MM:SS or MM:SS format.
         Hours are omitted if not needed.
@@ -544,7 +578,7 @@ def create_gui():
     # Update UI loop
     def update_process_label():
         global cached_cover
-
+        #print("DEBUG: update_process_label")
         app_id = media_info.get("app_id", "Unknown")
         status = media_info.get("status", "Stopped")
         
