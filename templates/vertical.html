@@ -76,6 +76,10 @@
             flex: 1;
             height: 3vh;
         }
+		
+		.progress-bar {
+			transition: width 1s linear;
+        }
 
         .source {
             margin-top: 2vh;
@@ -111,6 +115,8 @@
     </div>
 
     <script>
+		let previousCover = null;
+		
         function formatTime(seconds) {
             const minutes = Math.floor((seconds % 3600) / 60);
             const secs = Math.floor(seconds % 60);
@@ -126,11 +132,12 @@
                 document.getElementById('artist').textContent = media.artist || 'Unknown Artist';
                 document.getElementById('app_id').textContent = `Source: ${media.app_id || 'Unknown'}`;
 
-                // Update cover art
-                const coverElement = document.getElementById('cover');
-                if (media.cover) {
-                    coverElement.src = media.cover;
-                }
+                // Update cover art only if it changed
+				const coverElement = document.getElementById('cover');
+				if (media.cover && media.cover !== previousCover) {
+					coverElement.src = media.cover;
+					previousCover = media.cover;  // update previous cover to current
+				}
 
                 // Update progress bar and time
                 const currentTime = media.position || 0;
