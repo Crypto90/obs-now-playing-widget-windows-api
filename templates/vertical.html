@@ -78,8 +78,11 @@
         }
 		
 		.progress-bar {
-			transition: width 1s linear;
-        }
+			width: 100%;                 /* a scaleX reference width */
+			transform-origin: left center;
+			background-color: #0d6efd;
+			transition: transform 0.2s linear;
+		}
 
         .source {
             margin-top: 2vh;
@@ -89,6 +92,17 @@
         #app_id {
             display: none;
         }
+		
+		#widget {
+			opacity: 1;
+			transition: opacity 0.5s ease;
+		}
+
+		#widget.hidden {
+			opacity: 0;
+			transition: opacity 0.5s ease;
+			pointer-events: none;
+		}
     </style>
 </head>
 <body>
@@ -105,7 +119,7 @@
             <div class="progress-container">
                 <span id="current-time" class="time">0:00</span>
                 <div class="progress bg-secondary">
-                    <div id="progress-bar" class="progress-bar" role="progressbar" style="width: 0%;"></div>
+                    <div id="progress-bar" class="progress-bar" role="progressbar"></div>
                 </div>
                 <span id="duration" class="time">0:00</span>
             </div>
@@ -143,49 +157,67 @@
 				const response = await fetch('/media');
 				const media = await response.json();
 
-				document.getElementById('title').textContent = media.title || 'Unknown Title';
-				document.getElementById('artist').textContent = media.artist || 'Unknown Artist';
-				document.getElementById('app_id').textContent = `Source: ${media.app_id || 'Unknown'}`;
+				const widget = document.getElementById('widget');
 
+				//
+				// Helper: update text only when it changed
+				//
+				function setText(id, newValue) {
+					const el = document.getElementById(id);
+					if (el.textContent !== newValue) {
+						el.textContent = newValue;
+					}
+				}
+
+				//
+				// Update text fields (only if changed)
+				//
+				setText('title', media.title || 'Unknown Title');
+				setText('artist', media.artist || 'Unknown Artist');
+				setText('app_id', `Source: ${media.app_id || 'Unknown'}`);
+
+				//
+				// Update cover image (only if changed)
+				//
 				const coverElement = document.getElementById('cover');
 				if (media.cover && media.cover !== previousCover) {
 					coverElement.src = media.cover;
 					previousCover = media.cover;
 				}
 
+				//
+				// Update times
+				//
 				const currentTime = media.position || 0;
 				const duration = media.duration || 0;
 
-				document.getElementById('current-time').textContent = formatTime(currentTime);
-				document.getElementById('duration').textContent = formatTime(duration);
+				const formattedCurrent = formatTime(currentTime);
+				const formattedDuration = formatTime(duration);
 
-				const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
-				document.getElementById('progress-bar').style.width = `${progressPercent}%`;
+				setText('current-time', formattedCurrent);
+				setText('duration', formattedDuration);
 
-				const widget = document.getElementById('widget');
+				//
+				// Update progress bar scaling only when changed
+				//
+				const newProgress = duration > 0 ? (currentTime / duration) : 0;
+				const progressBar = document.getElementById('progress-bar');
 
-				// Only fade in/out when status CHANGES
+				if (progressBar.dataset.lastScale !== String(newProgress)) {
+					progressBar.style.transform = `scaleX(${newProgress})`;
+					progressBar.dataset.lastScale = String(newProgress);
+				}
+
+				//
+				// Fade in/out only on status change
+				//
 				if (media.status !== lastStatus) {
 					lastStatus = media.status;
 
 					if (media.status === "Playing") {
-						widget.style.display = "flex";
-						widget.style.opacity = 0;
-
-						// Apply transition once
-						widget.style.transition = "opacity 0.5s ease";
-
-						requestAnimationFrame(() => {
-							widget.style.opacity = 1;
-						});
+						widget.classList.remove("hidden");
 					} else {
-						widget.style.opacity = 0;
-
-						widget.addEventListener(
-							"transitionend",
-							() => (widget.style.display = "none"),
-							{ once: true }
-						);
+						widget.classList.add("hidden");
 					}
 				}
 
