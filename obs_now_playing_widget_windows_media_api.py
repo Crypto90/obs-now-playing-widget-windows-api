@@ -324,7 +324,7 @@ def create_gui():
     global locked_app_id
     #print("DEBUG: create_gui")
     root = tk.Tk()
-    root.title("Now Playing Widget v1.0.3 © Crypto90")
+    root.title("Now Playing Widget v1.0.4 © Crypto90")
     root.geometry("400x285")
     root.resizable(False, False)
     root.configure(bg="#1e1e1e")  # Dark background
