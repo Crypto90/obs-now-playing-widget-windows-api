@@ -118,88 +118,87 @@
 
     <script>
 		let previousCover = null;
-		
-        function getLayoutFromUrl() {
-            const urlParams = new URLSearchParams(window.location.search);
-            return urlParams.get('layout') === 'vertical' ? 'vertical' : 'horizontal';
-        }
+		let lastStatus = null;   // track last state to prevent repeated animations
 
-        function updateLayout() {
-            const widget = document.getElementById('widget');
-            widget.classList.toggle('vertical', getLayoutFromUrl() === 'vertical');
-        }
-		
+		function getLayoutFromUrl() {
+			const urlParams = new URLSearchParams(window.location.search);
+			return urlParams.get('layout') === 'vertical' ? 'vertical' : 'horizontal';
+		}
+
+		function updateLayout() {
+			const widget = document.getElementById('widget');
+			widget.classList.toggle('vertical', getLayoutFromUrl() === 'vertical');
+		}
+
 		function formatTime(seconds) {
-            const hours = Math.floor(seconds / 3600);
-            const minutes = Math.floor((seconds % 3600) / 60);
-            const secs = Math.floor(seconds % 60);
-            if (hours > 0) {
-                return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-            }
-            return `${minutes}:${secs.toString().padStart(2, '0')}`;
-        }
+			const hours = Math.floor(seconds / 3600);
+			const minutes = Math.floor((seconds % 3600) / 60);
+			const secs = Math.floor(seconds % 60);
+			if (hours > 0) {
+				return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+			}
+			return `${minutes}:${secs.toString().padStart(2, '0')}`;
+		}
 
-        async function fetchMediaInfo() {
-            try {
-                const response = await fetch('/media');
-                const media = await response.json();
+		async function fetchMediaInfo() {
+			try {
+				const response = await fetch('/media');
+				const media = await response.json();
 
-                document.getElementById('title').textContent = media.title || 'Unknown Title';
-                document.getElementById('artist').textContent = media.artist || 'Unknown Artist';
-                document.getElementById('app_id').textContent = `Source: ${media.app_id || 'Unknown'}`;
+				document.getElementById('title').textContent = media.title || 'Unknown Title';
+				document.getElementById('artist').textContent = media.artist || 'Unknown Artist';
+				document.getElementById('app_id').textContent = `Source: ${media.app_id || 'Unknown'}`;
 
-                // Update cover art only if it changed
 				const coverElement = document.getElementById('cover');
 				if (media.cover && media.cover !== previousCover) {
 					coverElement.src = media.cover;
-					previousCover = media.cover;  // update previous cover to current
+					previousCover = media.cover;
 				}
-				
-				
-				// Update progress bar and time
-                const currentTime = media.position || 0;
-                const duration = media.duration || 0;
 
-                document.getElementById('current-time').textContent = formatTime(currentTime);
-                document.getElementById('duration').textContent = formatTime(duration);
-				
+				const currentTime = media.position || 0;
+				const duration = media.duration || 0;
 
-                // Update progress bar
-                if (media.duration > 0) {
-                    const progressPercent = (media.position / media.duration) * 100;
-                    document.getElementById('progress-bar').style.width = `${progressPercent}%`;
-                } else {
-                    document.getElementById('progress-bar').style.width = '0%';
-                }
+				document.getElementById('current-time').textContent = formatTime(currentTime);
+				document.getElementById('duration').textContent = formatTime(duration);
 
-                // Update play/pause icon
-                const playPauseIcon = document.getElementById('play-pause');
-                //playPauseIcon.textContent = media.status === 'Playing' ? '⏸️' : '▶️';
-				
-				// only show the now playing widget if something is playing, otherwise hide it.
+				const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
+				document.getElementById('progress-bar').style.width = `${progressPercent}%`;
+
 				const widget = document.getElementById('widget');
-				
-				// Ensure the widget is hidden initially
-				widget.style.opacity = 0;
-				widget.style.transition = 'opacity 0.5s ease';
 
-				if (media.status === 'Playing') {
-					widget.style.display = 'flex';  // Ensure it's visible
-					setTimeout(() => widget.style.opacity = 1, 10);  // Fade in
-				} else {
-					widget.style.opacity = 0;  // Fade out
-					setTimeout(() => widget.style.display = 'none', 500);  // Hide after fade out
+				// Only fade in/out when status CHANGES
+				if (media.status !== lastStatus) {
+					lastStatus = media.status;
+
+					if (media.status === "Playing") {
+						widget.style.display = "flex";
+						widget.style.opacity = 0;
+
+						// Apply transition once
+						widget.style.transition = "opacity 0.5s ease";
+
+						requestAnimationFrame(() => {
+							widget.style.opacity = 1;
+						});
+					} else {
+						widget.style.opacity = 0;
+
+						widget.addEventListener(
+							"transitionend",
+							() => (widget.style.display = "none"),
+							{ once: true }
+						);
+					}
 				}
-				
-            } catch (error) {
-                console.error('Error fetching media info:', error);
-            }
-        }
 
-        // Apply initial layout and poll for media info
-        updateLayout();
-        setInterval(fetchMediaInfo, 1000);
-        fetchMediaInfo();
-    </script>
+			} catch (error) {
+				console.error("Error fetching media info:", error);
+			}
+		}
+
+		updateLayout();
+		setInterval(fetchMediaInfo, 1000);
+		fetchMediaInfo();
+	</script>
 </body>
 </html>

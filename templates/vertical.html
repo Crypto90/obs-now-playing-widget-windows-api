@@ -116,64 +116,87 @@
 
     <script>
 		let previousCover = null;
-		
-        function formatTime(seconds) {
-            const minutes = Math.floor((seconds % 3600) / 60);
-            const secs = Math.floor(seconds % 60);
-            return `${minutes}:${secs.toString().padStart(2, '0')}`;
-        }
+		let lastStatus = null;   // track last state to prevent repeated animations
 
-        async function fetchMediaInfo() {
-            try {
-                const response = await fetch('/media');
-                const media = await response.json();
+		function getLayoutFromUrl() {
+			const urlParams = new URLSearchParams(window.location.search);
+			return urlParams.get('layout') === 'vertical' ? 'vertical' : 'horizontal';
+		}
 
-                document.getElementById('title').textContent = media.title || 'Unknown Title';
-                document.getElementById('artist').textContent = media.artist || 'Unknown Artist';
-                document.getElementById('app_id').textContent = `Source: ${media.app_id || 'Unknown'}`;
+		function updateLayout() {
+			const widget = document.getElementById('widget');
+			widget.classList.toggle('vertical', getLayoutFromUrl() === 'vertical');
+		}
 
-                // Update cover art only if it changed
+		function formatTime(seconds) {
+			const hours = Math.floor(seconds / 3600);
+			const minutes = Math.floor((seconds % 3600) / 60);
+			const secs = Math.floor(seconds % 60);
+			if (hours > 0) {
+				return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+			}
+			return `${minutes}:${secs.toString().padStart(2, '0')}`;
+		}
+
+		async function fetchMediaInfo() {
+			try {
+				const response = await fetch('/media');
+				const media = await response.json();
+
+				document.getElementById('title').textContent = media.title || 'Unknown Title';
+				document.getElementById('artist').textContent = media.artist || 'Unknown Artist';
+				document.getElementById('app_id').textContent = `Source: ${media.app_id || 'Unknown'}`;
+
 				const coverElement = document.getElementById('cover');
 				if (media.cover && media.cover !== previousCover) {
 					coverElement.src = media.cover;
-					previousCover = media.cover;  // update previous cover to current
+					previousCover = media.cover;
 				}
 
-                // Update progress bar and time
-                const currentTime = media.position || 0;
-                const duration = media.duration || 0;
+				const currentTime = media.position || 0;
+				const duration = media.duration || 0;
 
-                document.getElementById('current-time').textContent = formatTime(currentTime);
-                document.getElementById('duration').textContent = formatTime(duration);
+				document.getElementById('current-time').textContent = formatTime(currentTime);
+				document.getElementById('duration').textContent = formatTime(duration);
 
-                if (duration > 0) {
-                    const progressPercent = (currentTime / duration) * 100;
-                    document.getElementById('progress-bar').style.width = `${progressPercent}%`;
-                } else {
-                    document.getElementById('progress-bar').style.width = '0%';
-                }
+				const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
+				document.getElementById('progress-bar').style.width = `${progressPercent}%`;
 
-                // Handle visibility and fade animation
-                const widget = document.getElementById('widget');
-                widget.style.opacity = 0;
-                widget.style.transition = 'opacity 0.5s ease';
+				const widget = document.getElementById('widget');
 
-                if (media.status === 'Playing') {
-                    widget.style.display = 'flex';
-                    setTimeout(() => widget.style.opacity = 1, 10);
-                } else {
-                    widget.style.opacity = 0;
-                    setTimeout(() => widget.style.display = 'none', 500);
-                }
+				// Only fade in/out when status CHANGES
+				if (media.status !== lastStatus) {
+					lastStatus = media.status;
 
-            } catch (error) {
-                console.error('Error fetching media info:', error);
-            }
-        }
+					if (media.status === "Playing") {
+						widget.style.display = "flex";
+						widget.style.opacity = 0;
 
-        // Poll for media info
-        setInterval(fetchMediaInfo, 1000);
-        fetchMediaInfo();
-    </script>
+						// Apply transition once
+						widget.style.transition = "opacity 0.5s ease";
+
+						requestAnimationFrame(() => {
+							widget.style.opacity = 1;
+						});
+					} else {
+						widget.style.opacity = 0;
+
+						widget.addEventListener(
+							"transitionend",
+							() => (widget.style.display = "none"),
+							{ once: true }
+						);
+					}
+				}
+
+			} catch (error) {
+				console.error("Error fetching media info:", error);
+			}
+		}
+
+		updateLayout();
+		setInterval(fetchMediaInfo, 1000);
+		fetchMediaInfo();
+	</script>
 </body>
 </html>
