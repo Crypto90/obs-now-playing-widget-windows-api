@@ -4,7 +4,7 @@
 
 ### Download prebuild binary (.exe) version which is ready to run:
 
-[Download v1.0.3](https://github.com/Crypto90/obs-now-playing-widget-windows-api/releases/download/1.0.3/obs_now_playing_widget_windows_media_api_v1.0.3.zip)
+[Download v1.0.4](https://github.com/Crypto90/obs-now-playing-widget-windows-api/releases/download/1.0.4/obs_now_playing_widget_windows_media_api_v1.0.4.zip)
 
 
 ### Horizontal preview:
