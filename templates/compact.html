@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Now Playing - Compact</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --bg-card: rgba(18, 20, 24, 0.9);
+      --card-border: rgba(255, 255, 255, 0.1);
+      --accent-color: #00d2ff;
+      --accent-secondary: #10b981;
+      --text-primary: #f8fafc;
+      --text-muted: #94a3b8;
+      --card-radius: 999px; /* Pill */
+      --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: transparent;
+      color: var(--text-primary);
+      font-family: var(--font-family);
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .pill-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: var(--card-radius);
+      padding: 6px 16px 6px 6px;
+      max-width: 480px;
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .pill-card.hidden {
+      opacity: 0;
+      transform: scale(0.95);
+      pointer-events: none;
+    }
+
+    .cover-art {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid rgba(255, 255, 255, 0.15);
+      background: #11141a;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    }
+
+    .info-box {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    .song-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .song-artist {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .eq-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent-secondary);
+      box-shadow: 0 0 8px var(--accent-secondary);
+      animation: pulse 1.6s infinite ease-in-out;
+    }
+
+    .paused .eq-dot {
+      background: var(--text-muted);
+      box-shadow: none;
+      animation: none;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.5; transform: scale(0.85); }
+      50% { opacity: 1; transform: scale(1.15); }
+    }
+  </style>
+</head>
+<body>
+  <div id="widget" class="pill-card">
+    <img id="cover" class="cover-art" src="" alt="Art" style="display: none;">
+    <div id="eq" class="eq-dot"></div>
+    <div class="info-box">
+      <span id="title" class="song-title">Now Playing</span>
+      <span id="artist" class="song-artist">Windows Media</span>
+    </div>
+  </div>
+
+  <script>
+    let lastCover = "";
+    async function fetchMedia() {
+      try {
+        const res = await fetch('/media');
+        if (!res.ok) return;
+        const data = await res.json();
+        const widget = document.getElementById('widget');
+        const titleEl = document.getElementById('title');
+        const artistEl = document.getElementById('artist');
+        const coverEl = document.getElementById('cover');
+        const eqEl = document.getElementById('eq');
+
+        titleEl.textContent = data.title || "No Track";
+        artistEl.textContent = data.artist || "Unknown Artist";
+
+        if (data.cover && data.cover.startsWith("data:image")) {
+          if (lastCover !== data.cover) {
+            coverEl.src = data.cover;
+            lastCover = data.cover;
+          }
+          coverEl.style.display = "block";
+        } else {
+          coverEl.style.display = "none";
+        }
+
+        if (data.status === "Playing") {
+          widget.classList.remove("paused");
+          widget.classList.remove("hidden");
+        } else {
+          widget.classList.add("paused");
+          const urlParams = new URLSearchParams(window.location.search);
+          if (urlParams.get('autohide') !== 'false' && data.status !== 'Paused') {
+            widget.classList.add("hidden");
+          }
+        }
+      } catch (err) {}
+    }
+    setInterval(fetchMedia, 1000);
+    fetchMedia();
+  </script>
+</body>
+</html>

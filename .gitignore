@@ -1,0 +1,24 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Config & local runtime files
+now_playing_settings.json
+.widget_write_test
+
+# PyInstaller & Build artifacts
+build/
+dist/
+*.spec
+
+# Virtual Environments
+venv/
+.venv/
+env/
+
+# IDE / OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

@@ -1,235 +1,362 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Now Playing</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            background-color: #121212;
-            color: white;
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
+  <meta charset="UTF-8">
+  <title>Now Playing - Horizontal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --bg-card: rgba(18, 20, 24, 0.88);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --accent-color: #00d2ff;
+      --accent-glow: rgba(0, 210, 255, 0.35);
+      --accent-secondary: #10b981;
+      --text-primary: #f8fafc;
+      --text-muted: #94a3b8;
+      --progress-track: rgba(255, 255, 255, 0.12);
+      --card-radius: 16px;
+      --cover-radius: 12px;
+      --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
 
-        .widget {
-            display: flex;
-            width: 100vw;
-            height: 100vh;
-        }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-        .cover-container {
-            position: relative;
-            /*flex: 1;*/
-            display: flex;
-            align-items: center;
-            justify-content: center;
-			float: right;
-        }
+    body {
+      background-color: transparent;
+      color: var(--text-primary);
+      font-family: var(--font-family);
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
 
-        .cover-art {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
+    .widget-card {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: var(--card-radius);
+      padding: 14px 18px;
+      width: 96%;
+      max-width: 640px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+      transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+      opacity: 1;
+      transform: scale(1);
+    }
 
-        .play-pause-icon {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: clamp(3rem, 10vw, 8rem);
-            opacity: 0.8;
-        }
+    .widget-card.hidden {
+      opacity: 0;
+      transform: scale(0.96);
+      pointer-events: none;
+    }
 
-        .info-container {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            padding: 2vw;
-        }
+    /* Album Cover */
+    .cover-wrapper {
+      position: relative;
+      width: 80px;
+      height: 80px;
+      min-width: 80px;
+      border-radius: var(--cover-radius);
+      overflow: hidden;
+      background: #11141a;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
 
-        h2 {
-            margin: 0;
-            font-size: clamp(1.5rem, 4vw, 4rem);
-        }
-		
-		h3 {
-            margin: 0;
-            font-size: clamp(1rem, 2vw, 4rem);
-        }
+    .cover-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: filter 0.3s ease;
+    }
 
-        .progress-container {
-            margin-top: 2vh;
-        }
+    .cover-placeholder {
+      width: 38px;
+      height: 38px;
+      fill: var(--text-muted);
+      opacity: 0.6;
+    }
 
-        .progress-bar {
-			height: clamp(1rem, 2vw, 2rem);
-			width: 100%;                 /* a scaleX reference width */
-			transform-origin: left center;
-			background-color: #0d6efd;
-			transition: transform 0.2s linear;
-		}
-		
-		.progress-container { display: flex; align-items: center; gap: 1vw; }
-        .progress { flex: 1; height: 3vh; }
+    /* Equalizer Bars Overlay */
+    .eq-overlay {
+      position: absolute;
+      bottom: 6px;
+      right: 6px;
+      display: flex;
+      align-items: flex-end;
+      gap: 2.5px;
+      height: 14px;
+      padding: 3px 4px;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(4px);
+      border-radius: 4px;
+    }
 
-        .source {
-            margin-top: 2vh;
-            font-size: clamp(1rem, 2vw, 2rem);
-        }
+    .eq-bar {
+      width: 2.5px;
+      background: var(--accent-color);
+      border-radius: 1px;
+      animation: eqBounce 1.2s infinite ease-in-out;
+    }
 
-        .vertical {
-            flex-direction: column;
-        }
-		
-		#app_id {
-			display: none;
-		}
-		
-		#widget {
-			opacity: 1;
-			transition: opacity 0.5s ease;
-		}
+    .eq-bar:nth-child(1) { height: 60%; animation-delay: 0.1s; }
+    .eq-bar:nth-child(2) { height: 100%; animation-delay: 0.3s; }
+    .eq-bar:nth-child(3) { height: 40%; animation-delay: 0.2s; }
+    .eq-bar:nth-child(4) { height: 80%; animation-delay: 0.4s; }
 
-		#widget.hidden {
-			opacity: 0;
-			pointer-events: none;
-		}
-    </style>
+    @keyframes eqBounce {
+      0%, 100% { transform: scaleY(0.3); }
+      50% { transform: scaleY(1); }
+    }
+
+    .paused .eq-bar {
+      animation: none !important;
+      transform: scaleY(0.3) !important;
+    }
+
+    /* Media Info */
+    .info-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-width: 0;
+      gap: 5px;
+    }
+
+    .header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .app-badge {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      padding: 2px 7px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-muted);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      white-space: nowrap;
+    }
+
+    /* Marquee / Auto-scroll text */
+    .title-wrapper {
+      position: relative;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    .song-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-primary);
+      display: inline-block;
+      letter-spacing: -0.2px;
+    }
+
+    .song-artist {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Progress Track & Bar */
+    .progress-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .progress-track {
+      flex: 1;
+      height: 5px;
+      background: var(--progress-track);
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent-secondary), var(--accent-color));
+      border-radius: 4px;
+      box-shadow: 0 0 10px var(--accent-glow);
+      transition: width 0.35s linear;
+    }
+
+    .time-text {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+      min-width: 32px;
+    }
+
+    .time-current { text-align: right; }
+    .time-duration { text-align: left; }
+  </style>
 </head>
 <body>
-    <div id="widget" class="widget">
-        <div class="cover-container">
-            <img id="cover" class="cover-art" src="" alt="Cover Art">
-            <span id="play-pause" class="play-pause-icon"></span>
-        </div>
-
-        <div class="info-container">
-            <h2 id="title">Unknown Title</h2>
-            <h3 id="artist">Unknown Artist</h3>
-
-            <div class="progress-container">
-				<span id="current-time" class="time">0:00</span>
-				<div class="progress bg-secondary">
-					<div id="progress-bar" class="progress-bar" role="progressbar"></div>
-				</div>
-				<span id="duration" class="time">0:00</span>
-			</div>
-
-            <p id="app_id" class="source">Source: Unknown</p>
-        </div>
+  <div id="widget" class="widget-card">
+    <div class="cover-wrapper">
+      <img id="cover" class="cover-img" src="" alt="Album Art" style="display: none;">
+      <svg id="placeholder-icon" class="cover-placeholder" viewBox="0 0 24 24">
+        <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+      </svg>
+      <div id="eq" class="eq-overlay">
+        <div class="eq-bar"></div>
+        <div class="eq-bar"></div>
+        <div class="eq-bar"></div>
+        <div class="eq-bar"></div>
+      </div>
     </div>
 
-    <script>
-		let previousCover = null;
-		let lastStatus = null;   // track last state to prevent repeated animations
+    <div class="info-container">
+      <div class="header-row">
+        <div class="title-wrapper">
+          <div id="title" class="song-title">Connecting...</div>
+        </div>
+        <span id="app-badge" class="app-badge">Media</span>
+      </div>
 
-		function getLayoutFromUrl() {
-			const urlParams = new URLSearchParams(window.location.search);
-			return urlParams.get('layout') === 'vertical' ? 'vertical' : 'horizontal';
-		}
+      <div id="artist" class="song-artist">Windows Media API</div>
 
-		function updateLayout() {
-			const widget = document.getElementById('widget');
-			widget.classList.toggle('vertical', getLayoutFromUrl() === 'vertical');
-		}
+      <div class="progress-wrapper">
+        <span id="current-time" class="time-text time-current">0:00</span>
+        <div class="progress-track">
+          <div id="progress-fill" class="progress-fill"></div>
+        </div>
+        <span id="duration" class="time-text time-duration">0:00</span>
+      </div>
+    </div>
+  </div>
 
-		function formatTime(seconds) {
-			const hours = Math.floor(seconds / 3600);
-			const minutes = Math.floor((seconds % 3600) / 60);
-			const secs = Math.floor(seconds % 60);
-			if (hours > 0) {
-				return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-			}
-			return `${minutes}:${secs.toString().padStart(2, '0')}`;
-		}
+  <script>
+    let lastCover = "";
+    let lastStatus = "";
+    let localPosition = 0;
+    let localDuration = 0;
+    let isPlaying = false;
+    let lastFetchTime = Date.now();
 
-		async function fetchMediaInfo() {
-			try {
-				const response = await fetch('/media');
-				const media = await response.json();
+    function formatTime(secs) {
+      if (!secs || isNaN(secs) || secs < 0) return "0:00";
+      secs = Math.floor(secs);
+      const m = Math.floor(secs / 60);
+      const s = secs % 60;
+      return `${m}:${s.toString().padStart(2, '0')}`;
+    }
 
-				const widget = document.getElementById('widget');
+    async function fetchMedia() {
+      try {
+        const res = await fetch('/media');
+        if (!res.ok) return;
+        const data = await res.json();
+        updateUI(data);
+      } catch (err) {
+        console.warn("Polling error:", err);
+      }
+    }
 
-				//
-				// Helper: update text only when it changed
-				//
-				function setText(id, newValue) {
-					const el = document.getElementById(id);
-					if (el.textContent !== newValue) {
-						el.textContent = newValue;
-					}
-				}
+    function updateUI(media) {
+      const widget = document.getElementById('widget');
+      const titleEl = document.getElementById('title');
+      const artistEl = document.getElementById('artist');
+      const appEl = document.getElementById('app-badge');
+      const coverEl = document.getElementById('cover');
+      const placeholderEl = document.getElementById('placeholder-icon');
+      const eqEl = document.getElementById('eq');
 
-				//
-				// Update text fields (only if changed)
-				//
-				setText('title', media.title || 'Unknown Title');
-				setText('artist', media.artist || 'Unknown Artist');
-				setText('app_id', `Source: ${media.app_id || 'Unknown'}`);
+      const title = media.title || "No Media Playing";
+      const artist = media.artist || "";
+      let appName = media.app_id || "Media";
+      if (appName.includes("!")) appName = appName.split("!").pop();
+      if (appName.endsWith(".exe")) appName = appName.replace(".exe", "");
 
-				//
-				// Update cover image (only if changed)
-				//
-				const coverElement = document.getElementById('cover');
-				if (media.cover && media.cover !== previousCover) {
-					coverElement.src = media.cover;
-					previousCover = media.cover;
-				}
+      if (titleEl.textContent !== title) titleEl.textContent = title;
+      if (artistEl.textContent !== artist) artistEl.textContent = artist || "Unknown Artist";
+      if (appEl.textContent !== appName) appEl.textContent = appName;
 
-				//
-				// Update times
-				//
-				const currentTime = media.position || 0;
-				const duration = media.duration || 0;
+      // Cover art
+      if (media.cover && media.cover.startsWith("data:image")) {
+        if (lastCover !== media.cover) {
+          coverEl.src = media.cover;
+          lastCover = media.cover;
+        }
+        coverEl.style.display = "block";
+        placeholderEl.style.display = "none";
+      } else {
+        coverEl.style.display = "none";
+        placeholderEl.style.display = "block";
+      }
 
-				const formattedCurrent = formatTime(currentTime);
-				const formattedDuration = formatTime(duration);
+      // Timing
+      localDuration = parseFloat(media.duration) || 0;
+      localPosition = parseFloat(media.position) || 0;
+      lastFetchTime = Date.now();
+      isPlaying = (media.status === "Playing");
 
-				setText('current-time', formattedCurrent);
-				setText('duration', formattedDuration);
+      // Equalizer state
+      if (isPlaying) {
+        eqEl.classList.remove("paused");
+      } else {
+        eqEl.classList.add("paused");
+      }
 
-				//
-				// Update progress bar scaling only when changed
-				//
-				const newProgress = duration > 0 ? (currentTime / duration) : 0;
-				const progressBar = document.getElementById('progress-bar');
+      // Status fade in/out
+      const urlParams = new URLSearchParams(window.location.search);
+      const autohide = urlParams.get('autohide') !== 'false';
 
-				if (progressBar.dataset.lastScale !== String(newProgress)) {
-					progressBar.style.transform = `scaleX(${newProgress})`;
-					progressBar.dataset.lastScale = String(newProgress);
-				}
+      if (autohide && media.status !== "Playing" && media.status !== "Paused") {
+        widget.classList.add("hidden");
+      } else {
+        widget.classList.remove("hidden");
+      }
+    }
 
-				//
-				// Fade in/out only on status change
-				//
-				if (media.status !== lastStatus) {
-					lastStatus = media.status;
+    // High frequency smooth timer loop for fluid progress bar
+    setInterval(() => {
+      if (isPlaying && localDuration > 0) {
+        const elapsed = (Date.now() - lastFetchTime) / 1000;
+        const currentPos = Math.min(localDuration, localPosition + elapsed);
+        const pct = (currentPos / localDuration) * 100;
+        document.getElementById('progress-fill').style.width = pct + "%";
+        document.getElementById('current-time').textContent = formatTime(currentPos);
+        document.getElementById('duration').textContent = formatTime(localDuration);
+      } else if (localDuration > 0) {
+        const pct = Math.min(100, (localPosition / localDuration) * 100);
+        document.getElementById('progress-fill').style.width = pct + "%";
+        document.getElementById('current-time').textContent = formatTime(localPosition);
+        document.getElementById('duration').textContent = formatTime(localDuration);
+      }
+    }, 100);
 
-					if (media.status === "Playing") {
-						widget.classList.remove("hidden");
-					} else {
-						widget.classList.add("hidden");
-					}
-				}
-
-			} catch (error) {
-				console.error("Error fetching media info:", error);
-			}
-		}
-
-		updateLayout();
-		setInterval(fetchMediaInfo, 1000);
-		fetchMediaInfo();
-	</script>
+    // Poll backend every second
+    setInterval(fetchMedia, 1000);
+    fetchMedia();
+  </script>
 </body>
 </html>
